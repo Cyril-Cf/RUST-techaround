@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use yew::prelude::*;
 
 enum Msg {
@@ -30,12 +32,14 @@ impl Component for Model {
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
+        let string = String::from_str("Bonjour").unwrap();
         // This gives us a component's "`Scope`" which allows us to send messages, etc to the component.
         let link = ctx.link();
         html! {
             <div>
                 <button onclick={link.callback(|_| Msg::AddOne)}>{ "+1" }</button>
                 <p>{ self.value }</p>
+                <p>{ string }</p>
             </div>
         }
     }

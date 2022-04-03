@@ -6,9 +6,10 @@ services:
     volumes:
       - ./nginx/default.dev.conf:/etc/nginx/conf.d/default.conf
     ports:
-      - 80:80
-    networks:
-      - techaround
+      - "80:80"
+    depends_on: 
+      - api
+      - front
   db:
     image: postgres
     environment:
@@ -16,15 +17,11 @@ services:
       - POSTGRES_DB=techaround
       - POSTGRES_PASSWORD=techaround
     ports:
-      - 5433:5432
-    networks:
-      - techaround
+      - 5432:5432
   api:
     build:
       context: ./api/
       dockerfile: ./Dockerfile
-    container_name: techaround-api
-    hostname: techaround-api
     env_file:
       - ./.dev.env
     volumes:
@@ -35,25 +32,60 @@ services:
       - "3000:3000"
     depends_on: 
       - db
-    networks:
-      - techaround
   front:
     build: 
       context: ./front/
       dockerfile: ./Dockerfile
-    container_name: techaround-front
-    hostname: techaround-front
     env_file:
       - ./.dev.env
     volumes:
       - ./front/.:/app
     working_dir: /app
     command: bash -c "trunk serve"
-    ports: 
-      - "8080:8080"
     depends_on: 
-      - api
+      - back  
+
+  back:
+    build:
+      context: ./back/
+      dockerfile: ./Dockerfile
+    env_file:
+      - ./.dev.env
+    volumes:
+      - ./back/.:/app
+    working_dir: /app
+    command: bash -c "cargo watch -x run"
+    ports:
+      - "3001:3001"
+    depends_on: 
+      - db
+
+  postgres-keycloak:
+    image: postgres:13.2
+    environment:
+      POSTGRES_DB: ${POSTGRESQL_DB}
+      POSTGRES_USER: ${POSTGRESQL_USER}
+      POSTGRES_PASSWORD: ${POSTGRESQL_PASS}
     networks:
-      - techaround
+      - local-keycloak
+
+  keycloak:
+    depends_on:
+      - postgres-keycloak
+    container_name: local_keycloak
+    environment:
+      DB_VENDOR: postgres
+      DB_ADDR: postgres-keycloak
+      DB_DATABASE: ${POSTGRESQL_DB}
+      DB_USER: ${POSTGRESQL_USER}
+      DB_PASSWORD: ${POSTGRESQL_PASS}
+      #KEYCLOAK_USER: admin
+      #KEYCLOAK_PASSWORD: admin
+    image: jboss/keycloak:${KEYCLOAK_VERSION}
+    ports:
+      - "28080:8080"
+    networks:
+      - local-keycloak
+
 networks:
-  techaround:
+  local-keycloak:
